@@ -1,0 +1,73 @@
+[package]
+name = "image-compressor"
+version = "0.1.0"
+description = "本地图片压缩工具 - 纯本地运行，保护图片隐私"
+authors = ["you"]
+edition = "2021"
+rust-version = "1.77.2"
+# 存在多个 bin 时，显式指定 Tauri 应用入口，避免打包时报
+# "failed to find main binary"
+default-run = "image-compressor"
+
+[lib]
+name = "image_compressor_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+# 主程序
+[[bin]]
+name = "image-compressor"
+path = "src/main.rs"
+
+# 开发期用于手动验证压缩逻辑的命令行工具（不参与打包）
+[[bin]]
+name = "compress_test"
+path = "src/bin/compress_test.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# 图片解码/编码 (纯 Rust)
+image = { version = "0.25", default-features = false, features = [
+    "jpeg",
+    "png",
+    "gif",
+    "webp",
+    "tiff",
+    "bmp",
+] }
+# WebP 有损/无损编码 (libwebp 绑定，静态编译)
+webp = "0.3"
+
+# GIF 逐帧解码 (获取帧延迟、调色板)
+gif = "0.13"
+
+# zip 打包与解包
+zip = { version = "2.2", default-features = false, features = ["deflate", "deflate64", "bzip2", "zstd", "time"] }
+
+# 并行压缩
+rayon = "1.10"
+
+# 错误处理
+anyhow = "1"
+thiserror = "2"
+
+# 文件遍历
+walkdir = "2"
+
+# 体积格式化/日志
+log = "0.4"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
