@@ -1,0 +1,52 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "图片压缩工具",
+  "version": "0.1.0",
+  "identifier": "com.local.imagecompressor",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "图片压缩工具",
+        "label": "main",
+        "width": 960,
+        "height": 760,
+        "minWidth": 720,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true,
+        "titleBarStyle": "Visible",
+        "dragDropEnabled": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost blob: data:; style-src 'self' 'unsafe-inline'; script-src 'self'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["app", "dmg"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "copyright": "本地图片压缩工具",
+    "category": "Utility",
+    "shortDescription": "本地图片批量压缩工具",
+    "longDescription": "纯本地运行的图片批量压缩工具，支持 PNG/JPG/WebP/GIF，可解析 zip 压缩包并保持目录结构，处理完成后自动打包。所有数据不出本机。",
+    "macOS": {
+      "minimumSystemVersion": "10.15",
+      "entitlements": "entitlements.plist",
+      "exceptionDomain": ""
+    }
+  }
+}
