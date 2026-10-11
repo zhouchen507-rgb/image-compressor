@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   build-macos:
-    name: Build ${{ matrix.target }}
+    name: Build ${{ matrix.label }}
     runs-on: macos-latest
     strategy:
       fail-fast: false
@@ -23,7 +23,7 @@ jobs:
         include:
           # Apple Silicon (M 系列)
           - target: aarch64-apple-darwin
-            label: Apple Silicon
+            label: Apple-Silicon
           # Intel
           - target: x86_64-apple-darwin
             label: Intel
@@ -35,7 +35,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -56,24 +56,38 @@ jobs:
       - name: Install frontend deps
         run: pnpm install --frozen-lockfile
 
-      - name: Build Tauri app (.app + .dmg)
+      # 关键：仅当确实配置了签名证书时才传入签名相关环境变量。
+      # 传空字符串会让 Tauri 误以为要签名，导致 keychain 导入失败。
+      - name: Detect signing secrets
+        id: signing
+        run: |
+          if [ -n "${{ secrets.APPLE_CERTIFICATE }}" ]; then
+            echo "enabled=true" >> $GITHUB_OUTPUT
+            echo "🔐 检测到签名证书，将启用签名与公证"
+          else
+            echo "enabled=false" >> $GITHUB_OUTPUT
+            echo "🔓 未配置签名证书，构建未签名版本（首次打开需右键→打开）"
+          fi
+
+      - name: Build Tauri app with signing
+        if: steps.signing.outputs.enabled == 'true'
         run: pnpm tauri build --target ${{ matrix.target }}
         env:
-          # 未配置签名证书时跳过签名，产出可用的未签名 dmg
-          # 若配置了 Secrets，会自动签名 + 公证
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          TAURI_SIGNING_PRIVATE_KEY: ""
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+
+      - name: Build Tauri app (unsigned)
+        if: steps.signing.outputs.enabled != 'true'
+        run: pnpm tauri build --target ${{ matrix.target }}
 
       - name: List build output
         run: |
           echo "=== bundle 目录 ==="
-          find src-tauri/target/${{ matrix.target }}/release/bundle -maxdepth 2 -type f | sort || true
+          find src-tauri/target/${{ matrix.target }}/release/bundle -maxdepth 3 | sort
 
       - name: Upload DMG
         uses: actions/upload-artifact@v4
@@ -83,11 +97,11 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Upload APP
+      - name: Upload APP bundle
         uses: actions/upload-artifact@v4
         with:
           name: app-${{ matrix.label }}
-          path: src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app
+          path: src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app/**
           if-no-files-found: warn
           retention-days: 30
 
